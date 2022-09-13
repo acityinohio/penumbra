@@ -124,3 +124,43 @@ fn transaction_sweep() {
         .timeout(std::time::Duration::from_secs(TIMEOUT_COMMAND_SECONDS));
     sweep_cmd.assert().success();
 }
+
+#[ignore]
+#[test]
+fn swap() {
+    let tmpdir = load_wallet_into_tmpdir();
+
+    // Swap 1penumbra for some gn.
+    let mut swap_cmd = Command::cargo_bin("pcli").unwrap();
+    swap_cmd
+        .args(&[
+            "--data-path",
+            tmpdir.path().to_str().unwrap(),
+            "tx",
+            "swap",
+            "--into",
+            "gn",
+            "1penumbra",
+        ])
+        .timeout(std::time::Duration::from_secs(TIMEOUT_COMMAND_SECONDS));
+    swap_cmd.assert().success();
+
+    // Wait for a couple blocks for the transaction to be confirmed.
+    let block_time = time::Duration::from_secs(2 * BLOCK_TIME_SECONDS);
+    thread::sleep(block_time);
+
+    // Cleanup: Swap the gn back (will fail if we received no gn in the above swap).
+    let mut swap_back_cmd = Command::cargo_bin("pcli").unwrap();
+    swap_back_cmd
+        .args(&[
+            "--data-path",
+            tmpdir.path().to_str().unwrap(),
+            "tx",
+            "swap",
+            "--into",
+            "penumbra",
+            "0.9gn",
+        ])
+        .timeout(std::time::Duration::from_secs(TIMEOUT_COMMAND_SECONDS));
+    swap_back_cmd.assert().success();
+}
